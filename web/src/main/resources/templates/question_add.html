@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html class="x-admin-sm" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <div th:replace="core"></div>
+</head>
+
+<body>
+<div class="layui-fluid">
+    <div class="layui-row">
+        <form class="layui-form">
+            <div class="layui-form-item">
+                <label for="did" class="layui-form-label">
+                    <span class="x-red">*</span>题目类型</label>
+                <div class="layui-input-inline">
+                    <select id="did" name="did" class="valid" lay-filter="option-filter" >
+
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+                <label for="qname" class="layui-form-label" ><span class="x-red">*</span>问题</label>
+                <div class="layui-input-block">
+                    <textarea placeholder="请输入问题描述" id="qname" name="qname" lay-verify="qname" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div id="options" class="layui-form-item">
+                <label class="layui-form-label"><span class="x-red">*</span>选项</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" lay-verify="tag" name="tag" lay-skin="primary" title="A" value="A" checked>
+                    <textarea placeholder="请输入选项A的描述" name="oname" class="layui-textarea"></textarea>
+                    <input type="checkbox" lay-verify="tag"  name="tag" lay-skin="primary" title="B" value="B" checked>
+                    <textarea placeholder="请输入选项B的描述" name="oname" class="layui-textarea"></textarea>
+                    <input type="checkbox" lay-verify="tag" name="tag" lay-skin="primary" title="C" value="C" checked>
+                    <textarea placeholder="请输入选项C的描述" name="oname" class="layui-textarea"></textarea>
+                    <input type="checkbox" lay-verify="tag" name="tag" lay-skin="primary" title="D" value="D" checked>
+                    <textarea placeholder="请输入选项D的描述" name="oname" class="layui-textarea"></textarea>
+                    <input type="checkbox" lay-verify="tag" name="tag" lay-skin="primary" title="E" value="E">
+                    <textarea placeholder="请输入选项E的描述" name="oname" class="layui-textarea"></textarea>
+                    <input type="checkbox" lay-verify="tag" name="tag" lay-skin="primary" title="F" value="F" >
+                    <textarea placeholder="请输入选项F的描述" name="oname" class="layui-textarea"></textarea>
+                </div>
+            </div>
+            <div class="layui-form-item layui-form-text">
+
+                <label for="answer" class="layui-form-label" ><span class="x-red">*</span>参考答案</label>
+                <div class="layui-input-block">
+                    <textarea placeholder="请输入参考答案" lay-verify="answer" id="answer" name="answer" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label for="qlevel" class="layui-form-label">
+                    <span class="x-red">*</span>难易等级</label>
+                <div class="layui-input-inline">
+                    <select id="qlevel" name="qlevel">
+
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label"></label>
+                <button class="layui-btn" lay-filter="add" lay-submit="">增加</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<script>layui.use(['form', 'layer'],
+    function () {
+        $ = layui.jquery;
+        var form = layui.form,
+            layer = layui.layer;
+
+        //异步查询字典表填充下拉菜单
+        $.get(ctxPath+"exam/dict/question_type.do",function (res) {
+            $(res).each(function (i,o) {
+                $("#did").append(`<option value=${o.did}>${o.dname}</option>`)
+            })
+            //重新渲染select
+            form.render();
+        },"json")
+        $.get(ctxPath+"exam/dict/question_level.do",function (res) {
+            $(res).each(function (i,o) {
+                $("#qlevel").append(`<option value=${o.did}>${o.dname}</option>`)
+            })
+            form.render();
+        },"json")
+
+        //自定义验证规则
+        form.verify({
+            qname: function (value) {
+                if (value.length < 10 ) {
+                    return "问题不得少于10个字符";
+                }
+            },
+            //pass: [/(.+){6,12}$/, '密码必须6到12位'],
+            /*repass: function (value) {
+                if ($('#L_pass').val() != $('#L_repass').val()) {
+                    return '两次密码不一致';
+                }
+            }*/
+            answer:function (value) {
+                if ($.trim(value).length == 0){
+                    return "请输入参考答案";
+                }
+            },
+            tag:function (value,item) {
+
+
+                var qtype = $("#did>option:selected").val();
+                var size = $(":checkbox[name=tag]:checked").size();
+                if (qtype == 3) return;
+                if (  size < 4){
+                        return "至少四个选项"
+                    }
+                var optionValue = "";
+                var flag = true;//用户输入了勾选内容
+                $(":checkbox[name=tag]:checked").each(function (i,o) {
+                    optionValue +=$(o).val();
+                    var oname = $.trim($("textarea[name=oname]").eq(i).val());
+                    if (!oname) {flag =false}
+                });
+                if ((size == 4 && optionValue != "ABCD") || (size == 5 && optionValue != "ABCDE")){
+                    return "请按顺序勾选"
+                }
+                if (!flag) {
+                    return "请输入对应选项的内容";
+                }
+                } 
+            
+        });
+
+        form.on('select(option-filter)',function (data) {
+            if (data.value == 3){
+                $("#options").hide();
+                $(":checkbox[name=tag]").prop("checked",false);
+                form.render("checkbox");
+            } else {
+                $("#options").show();
+                $(":checkbox[name=tag]:lt(4)").prop("checked",true);
+                form.render("checkbox");
+            }
+        })
+        //监听提交
+        form.on('submit(add)',
+            function (data) {
+            var options = new Array();
+
+            $(":checkbox[name=tag]:checked").each(function (index) {
+                var option = {};
+                option.tag=this.value;
+                var onameValue = $("textarea[name=oname]").eq(index).val();
+                option.oname = onameValue;
+                options.push(option);
+            })
+                data.field.options = options;   //向data.filed json对象中添加options值
+                delete  data.field.tag;     //删除data.filed json对象中的tag值
+                delete data.field.oname;    //删除data.filed json对象中的oname值
+                //layer.msg(JSON.stringify(data.field));
+                //发异步，把数据提交给java
+                $.ajax({
+                    url: ctxPath + "exam/question/add.do",
+                    data: JSON.stringify(data.field),
+                    contentType:"application/json",
+                    dataType: "text",
+                    method: "post",
+                    success: function(res) {
+                        layer.alert(res, {icon: 6}
+                             ,function () {
+                                     // 获得frame索引
+                                     var index = parent.layer.getFrameIndex(window.name);
+                                     //添加完成刷新页面
+                                     parent.layui.table.reload('tab');
+                                     //关闭当前frame
+                                     parent.layer.close(index);
+                             }
+                        );
+                    },
+                    error: function(req, textStatus, errorThrown) {
+                        alert("error:" + req);
+                        alert("error:" + textStatus);
+                        alert("error:" + errorThrown);
+                    }
+                });
+                return false;
+            });
+
+    });</script>
+<script>var _hmt = _hmt || [];
+(function () {
+    var hm = document.createElement("script");
+    hm.src = "https://hm.baidu.com/hm.js?b393d153aeb26b46e9431fabaf0f6190";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+})();</script>
+</body>
+
+</html>
